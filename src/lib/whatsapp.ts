@@ -1,8 +1,14 @@
 import { prisma } from "./prisma";
 import axios from "axios";
 
-// CONFIGURAÇÃO EVOLUTION API - Usar variáveis de ambiente se possível, senão fallback para local
-const EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_URL || "http://localhost:8080"; 
+// CONFIGURAÇÃO EVOLUTION API
+// Prioridade:
+// - EVOLUTION_URL (uso interno no servidor, ex: http://evolution:8080)
+// - NEXT_PUBLIC_EVOLUTION_URL (uso no browser, ex: https://saas.dksind.tech/evolution)
+const EVOLUTION_URL =
+  process.env.EVOLUTION_URL ||
+  process.env.NEXT_PUBLIC_EVOLUTION_URL ||
+  "http://localhost:8080";
 const API_KEY = process.env.EVOLUTION_API_KEY || "SINDICATO_TOKEN";
 
 const axiosConfig = {
