@@ -1,0 +1,35 @@
+{
+    email gleydson@example.com
+    on_demand_tls {
+        ask http://app:3000/api/caddy/ask
+    }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+:443 {
+    tls {
+        on_demand
+    }
+
+    encode gzip
+
+    @evolution {
+        host saas.dksind.tech
+        path /evolution/*
+    }
+    handle @evolution {
+        uri strip_prefix /evolution
+        reverse_proxy evolution:8080
+    }
+
+    handle {
+        reverse_proxy app:3000
+    }
+
+    log {
+        output file /data/access.log
+    }
+}

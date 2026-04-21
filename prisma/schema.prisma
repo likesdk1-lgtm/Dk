@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String        @id @default(cuid())
+  name         String
+  cpf          String        @unique
+  password     String
+  role         String        @default("ADMIN")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  chatMessages ChatMessage[]
+  logs         Log[]
+  tenantId     String?
+  tenant       Tenant?       @relation(fields: [tenantId], references: [id])
+}
+
+model Member {
+  id              String           @id @default(cuid())
+  name            String
+  cpf             String           @unique
+  birthDate       DateTime
+  registrationNum String           @unique
+  institution     String?          // Anteriormente healthUnit
+  photoUrl        String?
+  whatsapp        String?
+  status          String           @default("ACTIVE")
+  modalityId      String?
+  tenantId        String?
+  registrationMode String          @default("AUTO") // AUTO ou MANUAL
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  benefitUsages   BenefitUsage[]
+  billing         Billing[]
+  chatMessages    ChatMessage[]
+  eventCheckins   EventCheckin[]
+  modality        MemberModality?  @relation(fields: [modalityId], references: [id])
+  documents       MemberDocument[]
+  logs            MemberLog[]
+  notifications   Notification[]
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id])
+}
+
+model Event {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  location    String?
+  status      String         @default("ACTIVE")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  checkins    EventCheckin[]
+}
+
+model EventCheckin {
+  id        String   @id @default(cuid())
+  eventId   String
+  memberId  String
+  checkedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, memberId])
+}
+
+model MemberLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String
+  ipAddress String?
+  userAgent String?
+  memberId  String
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model ErrorLog {
+  id         String   @id @default(cuid())
+  message    String
+  stack      String?
+  path       String?
+  method     String?
+  statusCode Int?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}
+
+model MemberModality {
+  id        String   @id @default(cuid())
+  name      String
+  value     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  members   Member[]
+}
+
+model MemberDocument {
+  id        String   @id @default(cuid())
+  name      String
+  fileUrl   String
+  fileType  String
+  memberId  String
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Billing {
+  id          String    @id @default(cuid())
+  amount      Float
+  dueDate     DateTime
+  status      String    @default("PENDING")
+  paymentDate DateTime?
+  pixCode     String?
+  pixUrl      String?
+  efiId       String?
+  memberId    String
+  tenantId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  type        String
+  category    String
+  receiptUrl  String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TransactionCategory {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  createdAt DateTime @default(now())
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  action    String
+  details   String
+  ipAddress String?
+  adminId   String
+  createdAt DateTime @default(now())
+  admin     Admin    @relation(fields: [adminId], references: [id])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  fileUrl     String
+  fileType    String
+  isAdminOnly Boolean  @default(false)
+  memberId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Benefit {
+  id           String          @id @default(cuid())
+  title        String
+  description  String
+  category     String
+  imageUrl     String?
+  link         String?
+  monthlyLimit Int             @default(0)
+  companyId    String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  company      PartnerCompany? @relation(fields: [companyId], references: [id])
+  usages       BenefitUsage[]
+}
+
+model PartnerCompany {
+  id        String         @id @default(cuid())
+  name      String
+  document  String         @unique
+  email     String?        @unique
+  password  String
+  phone     String?
+  address   String?
+  category  String?
+  logoUrl   String?
+  status    String         @default("ACTIVE")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  benefits  Benefit[]
+  usages    BenefitUsage[]
+}
+
+model BenefitUsage {
+  id        String         @id @default(cuid())
+  benefitId String
+  memberId  String
+  companyId String
+  usedAt    DateTime       @default(now())
+  createdAt DateTime       @default(now())
+  company   PartnerCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  member    Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  benefit   Benefit        @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id                           String   @id @default(cuid())
+  tenantId                     String?  @unique
+  unionName                    String   @default("SINTASB-PI")
+  initials                     String?  // Sigla do Sindicato
+  logoUrl                      String?
+  cardDesign                   String?
+  googleAnalyticsId            String?
+  whatsAppToken                String?
+  whatsAppNumber               String?
+  whatsAppInstance             String?
+  whatsAppApiKey               String?
+  supportLink                  String?
+  efiClientId                  String?
+  efiClientSecret              String?
+  efiPixKey                    String?
+  efiSandbox                   Boolean  @default(true)
+  efiCertificate               String?
+  instagramAccount             String?
+  youtubeAccount               String?
+  facebookAccount              String?
+  homePageContent              String?
+  footerContent                String?
+  monthlyGoal                  Float?   @default(0)
+  billingGeneratedMessage      String?
+  billingReminder3DaysMessage  String?
+  billingReminder15DaysMessage String?
+  automationEnabled            Boolean  @default(true)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  tenant                       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id       String   @id @default(cuid())
+  title    String
+  message  String
+  channel  String
+  fileUrl  String?
+  memberId String
+  sentAt   DateTime @default(now())
+  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  tenantId       String?
+  whatsappNumber String
+  text           String?
+  type           String
+  status         String   @default("PENDING")
+  mediaUrl       String?
+  mediaType      String?
+  caption        String?
+  fileName       String?
+  memberId       String?
+  adminId        String?
+  remoteId       String?  @unique
+  isGroup        Boolean  @default(false)
+  groupName      String?
+  createdAt      DateTime @default(now())
+  admin          Admin?   @relation(fields: [adminId], references: [id])
+  member         Member?  @relation(fields: [memberId], references: [id])
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  details   String
+  ipAddress String?
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+model Tenant {
+  id         String   @id @default(cuid())
+  name       String
+  cnpj       String   @unique
+  subdomain  String   @unique
+  initials   String?  // Sigla do Sindicato
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  admins     Admin[]
+  subscriptions SaasSubscription[]
+  members    Member[]
+  billings   Billing[]
+  chatMessages ChatMessage[]
+  paymentGateway TenantPaymentGateway?
+  settings   Settings?
+}
+
+model TenantPaymentGateway {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  provider       String   @default("EFI") // EFI, MERCADO_PAGO, BANCO_DO_BRASIL, SICOOB, ITAU
+  
+  // EFI (Gerencianet)
+  efiClientId    String?
+  efiClientSecret String?
+  efiPixKey      String?
+  efiSandbox     Boolean  @default(true)
+  efiCertificate String?
+  
+  // Mercado Pago
+  mpAccessToken  String?
+  
+  // Banco do Brasil
+  bbClientId     String?
+  bbClientSecret String?
+  bbDeveloperKey String?
+  
+  // Sicoob
+  sicoobClientId String?
+  sicoobCertificate String?
+  
+  // Itaú
+  itauClientId   String?
+  itauClientSecret String?
+  itauCertificate String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  portal      String
+  action      String
+  ipAddress   String?
+  userAgent   String?
+  device      String?
+  location    String?
+  actorRole   String?
+  actorId     String?
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([portal])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SaasPlan {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  price     Float
+  currency  String   @default("BRL")
+  interval  String   @default("MONTHLY")
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subscriptions SaasSubscription[]
+}
+
+model SaasSubscription {
+  id        String   @id @default(cuid())
+  tenantId  String
+  planId    String
+  status    String   @default("TRIAL")
+  startedAt DateTime @default(now())
+  trialEndsAt DateTime?
+  currentPeriodEndsAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan      SaasPlan @relation(fields: [planId], references: [id])
+  payments  SaasPayment[]
+
+  @@index([tenantId])
+  @@index([planId])
+}
+
+model SaasPayment {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  amount         Float
+  status         String   @default("PENDING")
+  efiTxid        String?  @unique
+  pixCode        String?
+  pixUrl         String?
+  createdAt      DateTime @default(now())
+  paidAt         DateTime?
+  subscription   SaasSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+}
+
+model SupportTicket {
+  id         String   @id @default(cuid())
+  tenantId   String?
+  adminId    String?
+  subject    String
+  message    String
+  status     String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED
+  responseMessage String?
+  respondedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
